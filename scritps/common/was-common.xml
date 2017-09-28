@@ -1,0 +1,135 @@
+<project name="install-framework-was-common" default="help" basedir=".">
+	<description>
+    Install Framework WAS Common Library.
+  </description>
+  
+  <target name="help">
+	<echo level="info" message="was-common library functions."/>
+  </target>
+  
+	<target name="wsadmin-execute" description="execute python script on WSADMIN tool">		
+		<prop-require prop="was.admin" />
+		<prop-require prop="was.install.file" />
+		<prop-require prop="lib.directory" />
+		<prop-require prop="was.package.file" />
+		<prop-require prop="was.package.dir" />
+		<property name="jython.file" location="${lib.directory}/${was.install.file}"/>
+		
+		<pathconvert targetos="unix" property="was.package"> <!-- convert to forward slash to avoid issues -->
+			<path location="${was.package.file}"/>
+		</pathconvert>
+		<pathconvert targetos="unix" property="package.dir"> <!-- convert to forward slash to avoid issues -->
+			<path location="${was.package.dir}"/>
+		</pathconvert>
+		<pathconvert targetos="unix" property="lib.dir"> <!-- convert to forward slash to avoid issues -->
+			<path location="${lib.directory}"/>
+		</pathconvert>
+
+		
+		<echo level="info" message="WSADMIN was.admin=${was.admin}"/>
+		<echo level="info" message="WSADMIN was.install.file=${was.install.file}"/>
+		<echo level="info" message="WSADMIN lib.dir=${lib.dir}"/>
+		<echo level="info" message="WSADMIN was.package=${was.package}"/>		
+		<echo level="info" message="WSADMIN package.dir=${package.dir}"/>		
+		<trycatch property="jython.filec.error">
+			<try>
+				<exec dir="${lib.dir}" executable="${was.admin}" resultproperty="App.state" failonerror="true">
+					<arg line='-lang jython -f "${jython.file}" "-i" "${was.package}" "-pdir" "${package.dir}"'/>
+				</exec>
+				<echo level="info" message="WSADMIN was executed with success."/>
+			</try>
+			<catch>
+				<fail message="Error were detected executing WSADMIN tool. Please read the log-file for further details."/>
+			</catch>
+			<finally>
+				<echo level="debug" message="WSADMIN returned code:${App.state}"/>
+			</finally>
+		</trycatch>
+	</target>
+	
+<target name="wsant" description="execute ws_ant script">		
+		<!--prop-require prop="wsant.cmd" />
+		<prop-require prop="package.file" />
+		<prop-require prop="was.home" />
+		<prop-require prop="action" /-->
+		
+		<pathconvert targetos="unix" property="package.file"> <!-- convert to forward slash to avoid issues -->
+			<path location="${package.file}"/>
+		</pathconvert>
+		<pathconvert targetos="unix" property="package.dir"> <!-- convert to forward slash to avoid issues -->
+			<path location="${package.dir}"/>
+		</pathconvert>
+		<pathconvert targetos="unix" property="lib.dir"> <!-- convert to forward slash to avoid issues -->
+			<path location="${was.home}"/>
+		</pathconvert>
+
+		
+		<echo level="info" message="WSADMIN was.admin=${wsant.cmd}"/>
+		<echo level="info" message="WSADMIN lib.dir=${lib.dir}"/>
+		<echo level="info" message="WSADMIN was.package=${package.file}"/>		
+		<echo level="info" message="WSADMIN package.dir=${package.dir}"/>		
+		<trycatch property="jython.filec.error">
+			<try>
+				<exec dir="${lib.dir}" executable="${wsant.cmd}" resultproperty="App.state" failonerror="true">
+					<arg line='"${action}" -f "${scripts.dir}"\ws_ant\manageApp.xml'/>
+				</exec>
+				<echo level="info" message="WS_ANT was executed with success."/>
+			</try>
+			<catch>
+				<fail message="Error were detected executing WS_ANT tool. Please read the log-file for further details."/>
+			</catch>
+			<finally>
+				<echo level="debug" message="WS_ANT returned code:${App.state}"/>
+			</finally>
+		</trycatch>
+	</target>
+	
+	<target name="wsadmin-tools" description="execute python TOOLS script on WSADMIN tool">		
+		<!--prop-require prop="was.admin" />
+		<prop-require prop="lib.directory" /-->
+		<property name="jython.file" location="${scripts.dir}/${jython.file}"/>
+		<pathconvert targetos="unix" property="lib.dir"> <!-- convert to forward slash to avoid issues -->
+			<path location="${scripts.dir}"/>
+		</pathconvert>
+		<echo level="info" message="WSADMIN was.admin=${was.admin}"/>
+		<echo level="info" message="WSADMIN lib.dir=${lib.dir}"/>
+		<!--property name="args" value="-lang jython -f ${jython.file} ${jython.file.args} -javaoption ""-Dwsadmin.script.libraries=${scripts.dir}/info""" /-->
+		<property name="args" value="-lang jython -f ${jython.file} ${jython.file.args} -javaoption -Dwsadmin.script.libraries=${scripts.dir}/info" />
+		<echo level="info" message="WSADMIN args=${args}"/>		
+		<trycatch property="jython.filec.error">
+			<try>
+				<exec dir="${lib.dir}" executable="${was.admin}" resultproperty="App.state" failonerror="true">
+					<arg line="${args}"/>
+				</exec>
+				<echo level="info" message="WSADMIN was executed with success."/>
+			</try>
+			<catch>
+				<fail message="Error were detected executing WSADMIN tool. Please read the log-file for further details."/>
+			</catch>
+			<finally>
+				<echo level="debug" message="WSADMIN returned code:${App.state}"/>
+			</finally>
+		</trycatch>
+	</target>
+	
+<target name="backup" description="backup current environment">	
+	<pathconvert targetos="unix" property="lib.dir"> <!-- convert to forward slash to avoid issues -->
+		<path location="${was.home}"/>
+	</pathconvert>	
+	<trycatch property="jython.filec.error">
+		<try>
+			<exec dir="${lib.dir}" executable="${backup.cmd}" resultproperty="App.state" failonerror="true">
+					<arg line='-nostop ${log.dir}/backup-${date.now}.log'/>
+				</exec>
+				<echo level="info" message="WSADMIN was executed with success."/>
+			</try>
+			<catch>
+				<fail message="Error were detected executing WSADMIN tool. Please read the log-file for further details."/>
+			</catch>
+			<finally>
+				<echo level="debug" message="WSADMIN returned code:${App.state}"/>
+			</finally>
+		</trycatch>
+</target>
+  
+</project>

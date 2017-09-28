@@ -1,0 +1,54 @@
+<project name="install-framework-action-tasks" default="help" basedir=".">
+
+	<target name="install-package" description="install a release-package on the destination environment">
+	
+		<prop-require prop="package.release" />	
+		
+		<!-- backup -->
+		<echo level="info" message="backup current environment'..." />
+		<antcall target="backup">
+		</antcall>
+				
+		<!-- install WAS packages -->
+		<echo level="info" message="Installing WAS packages..."/>
+		<antcall target="install-was">
+		</antcall>
+	
+	</target>
+
+	<target name="install-was" description="install packages on WAS">
+		<antcall target="wsadmin-execute">
+			<param name="was.package.file" value="${safehub.home}/install-packages/${package.release}/${env.name}-${env.domain}-packages.cfg"/>
+			<param name="was.package.dir" value="${safehub.home}/install-packages/${package.release}/packages"/>
+		</antcall>
+	</target>
+	
+	<target name="list-apps" description="List applications" depends="-read-was-props">
+		<antcall target="wsadmin-tools">
+			<param name="jython.file" value="listApps.py"/>
+		</antcall>
+	</target>
+	
+	<target name="stop-app" description="Stop WAS application" depends="-read-was-props">
+		<antcall target="wsadmin-tools">
+			<param name="jython.file.args" value="stopapp ${action.params}"/>
+		</antcall>
+	</target>
+	
+	<target name="start-app" description="Start WAS application" depends="-read-was-props">
+		<antcall target="wsadmin-tools">
+			<param name="jython.file.args" value="startapp ${action.params}"/>
+		</antcall>
+	</target>
+
+	<target name="restart-app" description="ReStart WAS application" depends="-read-was-props">
+		<antcall target="wsadmin-tools">
+			<param name="jython.file.args" value="restartapp ${action.params}"/>
+		</antcall>
+	</target>		
+
+	<target name="help">
+		<echo level="info" message="install-tasks actions functions."/>
+	</target>
+
+</project>

@@ -1,0 +1,1438 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="Resources" default="info" basedir="..\..">
+	<taskdef name="wsadmin" classname="com.ibm.websphere.ant.tasks.WsAdmin" />
+	<taskdef name="wsStopApp" classname="com.ibm.websphere.ant.tasks.StopApplication"/> 
+	<taskdef name="wsStartApp" classname="com.ibm.websphere.ant.tasks.StartApplication"/> 
+	<taskdef name="wsUninstallApp" classname="com.ibm.websphere.ant.tasks.UninstallApplication"/> 
+	<taskdef name="wsInstallApp" classname="com.ibm.websphere.ant.tasks.InstallApplication"/> 
+	<taskdef name="wsListApps"  classname="com.ibm.websphere.ant.tasks.ListApplications"/>
+
+<path id="basedir.path">
+    <pathelement path="${basedir}" />
+</path>
+<pathconvert targetos="unix" property="basedir.unix" refid="basedir.path"/>
+<echo message="${basedir.unix}" />
+
+	<!-- 
+	All of the targets run scripts that take their arguments from the command 
+	line.  The arguments to pass to the scripts are retrieved from a properties 
+	file.
+	-->
+	<property file="${basedir.unix}/scripts/builder/Resources.properties" />
+
+	<!-- <taskdef resource="net/sf/antcontrib/antcontrib.properties"> -->
+<taskdef resource="net/sf/antcontrib/antlib.xml">
+	<classpath>
+		<pathelement location="${basedir.unix}/ant/lib/ant-contrib-1.0b3.jar"/>
+	</classpath>
+</taskdef>	
+<!-- redefine base.dir to unix like -->
+
+<target name="info">
+		<echo>
+  Possible targets:
+    readActivationSpecs
+    readConnFactories
+    readDataSources
+    readJDBCProviders
+    readNameSpaceBindings
+    readQueues
+    readTopics
+    readURLs
+    readALL
+    copyResources
+    createActivationSpecs
+    createConnFactories
+    createDataSources
+    createJDBCProviders
+    createNameSpaceBindings
+    createQueues
+    createTopics
+    createURLs
+    markResourcesProcessed
+    markResourcesNotProcessed
+	 clearInput
+	 clearOutput
+	 installApps
+	 markAppsProcessed
+	 markAppsNotProcessed
+		</echo>
+	</target>
+
+<target name="init">
+	<!-- global variables -->		
+	<property file="${basedir.unix}/scripts/general-config.properties"/> 
+	<!--property name="log.dir" location="log"/-->
+	
+	<!-- logging directory -->
+    <mkdir dir="${log.dir}"/>
+    <!-- setup installation logging -->
+    <tstamp>
+      <format property="date.now" pattern="yyyyMMddHHmmss"/>
+    </tstamp>
+	
+	<property name="release.logfile" location="${log.dir}/release-log-${date.now}.log"/>
+    <record name="${release.logfile}" loglevel="info" action="start" emacsmode="true" append="true"/>
+</target>
+
+	<target name="inputWSAdminData"  description="Get user input">
+    <input message="Insert the Scope of the resources. The scope can be a cluster, a node, a server or insert ALL for all the resources (if the scope is a server it must be used the form Node:Server).(Default: ALL)"
+      addproperty="remoteScope"
+	  defaultvalue="ALL"/>
+ 	</target>
+
+	<target name="confirmDeletion"  description="Get user input">
+    <input message="Do you want to delete previous files before performing the operation? (Y/N)(Default: N)"
+      addproperty="deletion.choice"
+	  defaultvalue="N"/>
+ 	</target>
+
+	<target name="confirmCopy"  description="Get user input">
+    <input message="Do you want to copy the resource from the output folder to the input one after reading the selected resources (Y/N)? (Default: N)"
+	  defaultvalue="N"
+      addproperty="copy.choice"/>
+ 	</target>
+
+<!--
+	The readActivationSpecs target reads all the Activation Specifications
+  from the remote server and save them into the ${ActSpecsOutDir} directory. 
+	-->
+	<target name="readActivationSpecs"  depends="inputWSAdminData,confirmDeletion,confirmCopy" description="Read the defined Activation Specifications">		
+		<if>
+			<and>
+				<isset property="deletion.choice"/>
+				<equals arg1="${deletion.choice}" arg2="Y" />
+			</and>
+			<then>
+				<antcall target="clearOutput-AS"/>
+			</then>
+		</if>
+		<echo message="--- Reading the defined Activation Specifications and save them into the ${ActSpecsOutDir}. ---"/>
+<!--
+		<echo message=" Connecting to host: ${remoteHost} Port: ${remoteSoapPort} User: ${remoteAdminID} Password: ${remoteAdminPasswd}. "/>
+-->
+		<echo message="--- Connecting to host: ${remoteHost} Port: ${remoteSoapPort} User: ${remoteAdminID} Password: ********. ---"/>
+		<wsadmin script="${basedir.unix}/scripts/resources/ReadActivationSpecs.py" lang="jython" properties="${basedir.unix}/scripts/builder/Resources.properties" host="${remoteHost}" port="${remoteSoapPort}"  conntype="soap" user="${remoteAdminID}" password="${remoteAdminPasswd}" failonerror="true">
+			<arg value="${basedir.unix}/${ActSpecsOutDir}"/>
+			<arg value="${remoteScope}"/>
+		</wsadmin>
+		<if>
+			<and>
+				<isset property="copy.choice"/>
+				<equals arg1="${copy.choice}" arg2="Y" />
+			</and>
+			<then>
+				<if>
+					<and>
+						<isset property="deletion.choice"/>
+						<equals arg1="${deletion.choice}" arg2="Y" />
+					</and>
+					<then>
+						<antcall target="clearInput-AS"/>
+					</then>
+				</if>
+				<antcall target="copyResources-AS"/>
+			</then>
+		</if>
+	</target>	
+
+<!--
+	The readConnFactories target reads all the Connection Factories
+  from the remote server and save them into the ${ConnFactoriesOutDir} directory. 
+	-->
+	<target name="readConnFactories"  depends="inputWSAdminData,confirmDeletion,confirmCopy" description="Read the defined Connection Factories">		
+		<if>
+			<and>
+				<isset property="deletion.choice"/>
+				<equals arg1="${deletion.choice}" arg2="Y" />
+			</and>
+			<then>
+				<antcall target="clearOutput-CF"/>
+			</then>
+		</if>
+		<echo message="--- Reading the defined Connection Factories and save them into the ${ConnFactoriesOutDir}. ---"/>
+<!--
+		<echo message=" Connecting to host: ${remoteHost} Port: ${remoteSoapPort} User: ${remoteAdminID} Password: ${remoteAdminPasswd}. "/>
+-->
+		<echo message="--- Connecting to host: ${remoteHost} Port: ${remoteSoapPort} User: ${remoteAdminID} Password: ********. ---"/>
+		<wsadmin script="${basedir.unix}/scripts/resources/ReadConnectionFactory.py" lang="jython" properties="${basedir.unix}/scripts/builder/Resources.properties" host="${remoteHost}" port="${remoteSoapPort}"  conntype="soap" user="${remoteAdminID}" password="${remoteAdminPasswd}" failonerror="true">
+			<arg value="${basedir.unix}/${ConnFactoriesOutDir}"/>
+			<arg value="${remoteScope}"/>
+		</wsadmin>
+		<if>
+			<and>
+				<isset property="copy.choice"/>
+				<equals arg1="${copy.choice}" arg2="Y" />
+			</and>
+			<then>
+				<if>
+					<and>
+						<isset property="deletion.choice"/>
+						<equals arg1="${deletion.choice}" arg2="Y" />
+					</and>
+					<then>
+						<antcall target="clearInput-CF"/>
+					</then>
+				</if>
+				<antcall target="copyResources-CF"/>
+			</then>
+		</if>
+	</target>	
+
+<!--
+	The readDataSources target reads all the Data Sources
+  from the remote server and save them into the ${DataSourcesOutDir} directory. 
+	-->
+	<target name="readDataSources"  depends="inputWSAdminData,confirmDeletion,confirmCopy" description="Read the defined Data Sources">		
+		<if>
+			<and>
+				<isset property="deletion.choice"/>
+				<equals arg1="${deletion.choice}" arg2="Y" />
+			</and>
+			<then>
+				<antcall target="clearOutput-DS"/>
+			</then>
+		</if>
+		<echo message="--- Reading the defined Data Sources and save them into the ${DataSourcesOutDir}. ---"/>
+<!--
+		<echo message=" Connecting to host: ${remoteHost} Port: ${remoteSoapPort} User: ${remoteAdminID} Password: ${remoteAdminPasswd}. "/>
+-->
+		<echo message="--- Connecting to host: ${remoteHost} Port: ${remoteSoapPort} User: ${remoteAdminID} Password: ********. ---"/>
+		<wsadmin script="${basedir.unix}/scripts/resources/ReadDataSources.py" lang="jython" properties="${basedir.unix}/scripts/builder/Resources.properties" host="${remoteHost}" port="${remoteSoapPort}"  conntype="soap" user="${remoteAdminID}" password="${remoteAdminPasswd}" failonerror="true">
+			<arg value="${basedir.unix}/${DataSourcesOutDir}"/>
+			<arg value="${remoteScope}"/>
+		</wsadmin>
+		<if>
+			<and>
+				<isset property="copy.choice"/>
+				<equals arg1="${copy.choice}" arg2="Y" />
+			</and>
+			<then>
+				<if>
+					<and>
+						<isset property="deletion.choice"/>
+						<equals arg1="${deletion.choice}" arg2="Y" />
+					</and>
+					<then>
+						<antcall target="clearInput-DS"/>
+					</then>
+				</if>
+				<antcall target="copyResources-DS"/>
+			</then>
+		</if>
+	</target>	
+
+<!--
+	The readJDBCProviders target reads all the JDBC Providers
+  from the remote server and save them into the ${JDBCProvidersOutDir} directory. 
+	-->
+	<target name="readJDBCProviders"  depends="inputWSAdminData,confirmDeletion,confirmCopy" description="Read the defined JDBC Providers">		
+		<if>
+			<and>
+				<isset property="deletion.choice"/>
+				<equals arg1="${deletion.choice}" arg2="Y" />
+			</and>
+			<then>
+				<antcall target="clearOutput-JDBCProvider"/>
+			</then>
+		</if>
+		<echo message="--- Reading the defined JDBC Providers and save them into the ${JDBCProvidersOutDir}. ---"/>
+		<!--
+		<echo message=" Connecting to host: ${remoteHost} Port: ${remoteSoapPort} User: ${remoteAdminID} Password: ${remoteAdminPasswd}. "/>
+-->
+		<echo message="--- Connecting to host: ${remoteHost} Port: ${remoteSoapPort} User: ${remoteAdminID} Password: ********. ---"/>
+		<wsadmin script="${basedir.unix}/scripts/resources/ReadJDBCProvider.py" lang="jython" properties="${basedir.unix}/scripts/builder/Resources.properties" host="${remoteHost}" port="${remoteSoapPort}"  conntype="soap" user="${remoteAdminID}" password="${remoteAdminPasswd}" failonerror="true">
+			<arg value="${basedir.unix}/${JDBCProvidersOutDir}"/>
+			<arg value="${remoteScope}"/>
+		</wsadmin>
+		<if>
+			<and>
+				<isset property="copy.choice"/>
+				<equals arg1="${copy.choice}" arg2="Y" />
+			</and>
+			<then>
+				<if>
+					<and>
+						<isset property="deletion.choice"/>
+						<equals arg1="${deletion.choice}" arg2="Y" />
+					</and>
+					<then>
+						<antcall target="clearInput-JDBCProvider"/>
+					</then>
+				</if>
+				<antcall target="copyResources-JDBCProvider"/>
+			</then>
+		</if>
+	</target>	
+
+<!--
+	The readNameSpaceBindings target reads all the Name Space Bindings
+  from the remote server and save them into the ${NameSpaceBindOutDir} directory. 
+	-->
+	<target name="readNameSpaceBindings"  depends="inputWSAdminData,confirmDeletion,confirmCopy" description="Read the defined Name Space Bindings">		
+		<if>
+			<and>
+				<isset property="deletion.choice"/>
+				<equals arg1="${deletion.choice}" arg2="Y" />
+			</and>
+			<then>
+				<antcall target="clearOutput-NameSpaceBindings"/>
+			</then>
+		</if>
+		<echo message="--- Reading the defined Name Space Bindings and save them into the ${NameSpaceBindOutDir}. ---"/>
+<!--
+		<echo message=" Connecting to host: ${remoteHost} Port: ${remoteSoapPort} User: ${remoteAdminID} Password: ${remoteAdminPasswd}. "/>
+-->
+		<echo message="--- Connecting to host: ${remoteHost} Port: ${remoteSoapPort} User: ${remoteAdminID} Password: ********. ---"/>
+		<wsadmin script="${basedir.unix}/scripts/resources/ReadNameSpaceBinding.py" lang="jython" properties="${basedir.unix}/scripts/builder/Resources.properties" host="${remoteHost}" port="${remoteSoapPort}"  conntype="soap" user="${remoteAdminID}" password="${remoteAdminPasswd}" failonerror="true">
+			<arg value="${basedir.unix}/${NameSpaceBindOutDir}"/>
+			<arg value="${remoteScope}"/>
+		</wsadmin>
+		<if>
+			<and>
+				<isset property="copy.choice"/>
+				<equals arg1="${copy.choice}" arg2="Y" />
+			</and>
+			<then>
+				<if>
+					<and>
+						<isset property="deletion.choice"/>
+						<equals arg1="${deletion.choice}" arg2="Y" />
+					</and>
+					<then>
+						<antcall target="clearInput-NameSpaceBindings"/>
+					</then>
+				</if>
+				<antcall target="copyResources-NameSpaceBindings"/>
+			</then>
+		</if>
+	</target>	
+
+<!--
+	The readQueues target reads all the Queues
+  from the remote server and save them into the ${QueuesOutDir} directory. 
+	-->
+	<target name="readQueues"  depends="inputWSAdminData,confirmDeletion,confirmCopy" description="Read the defined Queues">		
+		<if>
+			<and>
+				<isset property="deletion.choice"/>
+				<equals arg1="${deletion.choice}" arg2="Y" />
+			</and>
+			<then>
+				<antcall target="clearOutput-QUEUE"/>
+			</then>
+		</if>
+		<echo message="--- Reading the defined Queues and save them into the ${QueuesOutDir}. ---"/>
+		<echo message="--- Connecting to host: ${remoteHost} Port: ${remoteSoapPort} User: ${remoteAdminID} Password: *********. ---"/>
+		<wsadmin script="${basedir.unix}/scripts/resources/ReadQueues.py" lang="jython" properties="${basedir.unix}/scripts/builder/Resources.properties" host="${remoteHost}" port="${remoteSoapPort}"  conntype="soap" user="${remoteAdminID}" password="${remoteAdminPasswd}" failonerror="true">
+			<arg value="${basedir.unix}/${QueuesOutDir}"/>
+			<arg value="${remoteScope}"/>
+		</wsadmin>
+		<if>
+			<and>
+				<isset property="copy.choice"/>
+				<equals arg1="${copy.choice}" arg2="Y" />
+			</and>
+			<then>
+				<if>
+					<and>
+						<isset property="deletion.choice"/>
+						<equals arg1="${deletion.choice}" arg2="Y" />
+					</and>
+					<then>
+						<antcall target="clearInput-QUEUE"/>
+					</then>
+				</if>
+				<antcall target="copyResources-QUEUE"/>
+			</then>
+		</if>
+	</target>	
+
+<!--
+	The readTopics target reads all the Topics
+  from the remote server and save them into the ${TopicsOutDir} directory. 
+	-->
+	<target name="readTopics"  depends="inputWSAdminData,confirmDeletion,confirmCopy" description="Read the defined Topics">		
+		<if>
+			<and>
+				<isset property="deletion.choice"/>
+				<equals arg1="${deletion.choice}" arg2="Y" />
+			</and>
+			<then>
+				<antcall target="clearOutput-TOPIC"/>
+			</then>
+		</if>
+		<echo message="--- Reading the defined Topics and save them into the ${TopicsOutDir}. ---"/>
+		<echo message="--- Connecting to host: ${remoteHost} Port: ${remoteSoapPort} User: ${remoteAdminID} Password: **************. ---"/>
+		<wsadmin script="${basedir.unix}/scripts/resources/ReadTopics.py" lang="jython" properties="${basedir.unix}/scripts/builder/Resources.properties" host="${remoteHost}" port="${remoteSoapPort}"  conntype="soap" user="${remoteAdminID}" password="${remoteAdminPasswd}" failonerror="true">
+			<arg value="${basedir.unix}/${TopicsOutDir}"/>
+			<arg value="${remoteScope}"/>
+		</wsadmin>
+		<if>
+			<and>
+				<isset property="copy.choice"/>
+				<equals arg1="${copy.choice}" arg2="Y" />
+			</and>
+			<then>
+				<if>
+					<and>
+						<isset property="deletion.choice"/>
+						<equals arg1="${deletion.choice}" arg2="Y" />
+					</and>
+					<then>
+						<antcall target="clearInput-TOPIC"/>
+					</then>
+				</if>
+				<antcall target="copyResources-TOPIC"/>
+			</then>
+		</if>
+	</target>	
+
+<!--
+	The readURLs target reads all the URLs
+  from the remote server and save them into the ${URLsOutDir} directory. 
+	-->
+	<target name="readURLs"  depends="inputWSAdminData,confirmDeletion,confirmCopy" description="Read the defined URLs">		
+		<if>
+			<and>
+				<isset property="deletion.choice"/>
+				<equals arg1="${deletion.choice}" arg2="Y" />
+			</and>
+			<then>
+				<antcall target="clearOutput-URLS"/>
+			</then>
+		</if>
+		<echo message="--- Reading the defined URLs and save them into the ${URLsOutDir}. ---"/>
+		<echo message="--- Connecting to host: ${remoteHost} Port: ${remoteSoapPort} User: ${remoteAdminID} Password: **************. ---"/>
+		<wsadmin script="${basedir.unix}/scripts/resources/ReadURL.py" lang="jython" properties="${basedir.unix}/scripts/builder/Resources.properties" host="${remoteHost}" port="${remoteSoapPort}"  conntype="soap" user="${remoteAdminID}" password="${remoteAdminPasswd}" failonerror="true">
+			<arg value="${basedir.unix}/${URLsOutDir}"/>
+			<arg value="${remoteScope}"/>
+		</wsadmin>
+		<if>
+			<and>
+				<isset property="copy.choice"/>
+				<equals arg1="${copy.choice}" arg2="Y" />
+			</and>
+			<then>
+				<if>
+					<and>
+						<isset property="deletion.choice"/>
+						<equals arg1="${deletion.choice}" arg2="Y" />
+					</and>
+					<then>
+						<antcall target="clearInput-URLS"/>
+					</then>
+				</if>
+				<antcall target="copyResources-URLS"/>
+			</then>
+		</if>
+	</target>	
+
+  <target name="readALL" depends="init, readActivationSpecs, readConnFactories, readDataSources, readJDBCProviders, readNameSpaceBindings, readQueues, readTopics, readURLs" description="Read all the resources."> 
+  </target>
+
+<!--
+	The createActivationSpecs target creates all the Activation Specification
+  related to properties files into the ${ActSpecsDir} directory. 
+	-->
+	<target name="createActivationSpecs">
+		<foreach target="createActivationSpec" param="theFile">
+			<path>
+				<fileset dir="${basedir.unix}/${ActSpecsDir}">
+					<include name="**/*.${originalExt}"/>
+				</fileset>
+			</path>
+		</foreach>
+	</target>
+
+	<target name="createActivationSpec"  description="Create the specified Activation Specification">		
+		<echo message="--- Creating an Activation Specification using the ${theFile} file. ---"/>		
+<!--
+		<wsadmin script="${basedir.unix}/scripts/resources/CreateActivationSpecs.py" lang="jython" properties="${basedir.unix}/scripts/builder/Resources.properties" port="${soapPort}"  conntype="soap" user="${adminID}" password="${adminPasswd}" resultproperty="result" failonerror="false">
+			<arg value="${theFile}"/>
+		</wsadmin>
+-->
+		<!-- next code do not work in windows, because -Dwsadmin.script.libraries=${basedir.unix}/scripts/info needs to be between quotes. To solve this
+		  I have copied the info directory to the C:\IBM\WebSphere\AppServer\scriptLibraries
+		<arg line="-username ${adminID} -password ${adminPasswd} -f ${basedir.unix}/scripts/resources/CreateActivationSpecs.py ${theFile} -lang jython -port ${soapPort} -conntype soap -javaoption -Dwsadmin.script.libraries=${basedir.unix}/scripts/info"/>
+		-->
+		<exec executable="${was.admin}" resultproperty="result" failonerror="false">
+			<arg line="-username ${adminID} -password ${adminPasswd} -f ${basedir.unix}/scripts/resources/CreateActivationSpecs.py ${theFile} -lang jython -port ${soapPort} -conntype soap"/>
+		</exec>
+	
+		<echo>Result: ${result}</echo>
+		<if>
+			<and>
+				<isset property="result"/>
+				<equals arg1="${result}" arg2="0" />
+			</and>
+			<then>
+				<var name="baseFile" value="" unset="true"/>
+				<basename property="baseFile" file="${theFile}"/>
+				<antcall target="markFilesProcessed">
+					<param name="filesFromDir" value="${basedir.unix}/${ActSpecsDir}"/>
+					<param name="filesToDir" value="${basedir.unix}/${ActSpecsDir}"/>
+					<param name="filesToMove" value="${baseFile}"/>
+				</antcall>
+			</then>
+		</if>
+	</target>	
+
+<!--
+	The createConnFactories target creates all the Connection Factories 
+  related to properties files into the ${ConnFactoriesDir} directory. 
+	-->
+	<target name="createConnFactories">
+		<foreach target="createConnFactory" param="theFile">
+			<path>
+				<fileset dir="${basedir.unix}/${ConnFactoriesDir}">
+					<include name="**/*.${originalExt}"/>
+				</fileset>
+			</path>
+		</foreach>
+	</target>
+
+	<target name="createConnFactory"  description="Create the specified Connection Factories">		
+		<echo message="--- Creating a Connection Factory using the ${theFile} file. ---"/>		
+<!--
+		<wsadmin script="${basedir.unix}/scripts/resources/CreateConnectionFactory.py" lang="jython" properties="${basedir.unix}/scripts/builder/Resources.properties" port="${soapPort}"  conntype="soap" user="${adminID}" password="${adminPasswd}" failonerror="true">
+			<arg value="${theFile}"/>
+		</wsadmin>
+	-->
+		<exec executable="${was.admin}" resultproperty="result" failonerror="false">
+			<arg line="-username ${adminID} -password ${adminPasswd} -f ${basedir.unix}/scripts/resources/CreateConnectionFactory.py ${theFile} -lang jython -port ${soapPort} -conntype soap -javaoption -Dwsadmin.script.libraries=${basedir.unix}/scripts/info"/>
+		</exec>
+		<echo>Result: ${result}</echo>
+		<if>
+			<and>
+				<isset property="result"/>
+				<equals arg1="${result}" arg2="0" />
+			</and>
+			<then>
+				<var name="baseFile" value="" unset="true"/>
+				<basename property="baseFile" file="${theFile}"/>
+				<antcall target="markFilesProcessed">
+					<param name="filesFromDir" value="${basedir.unix}/${ConnFactoriesDir}"/>
+					<param name="filesToDir" value="${basedir.unix}/${ConnFactoriesDir}"/>
+					<param name="filesToMove" value="${baseFile}"/>
+				</antcall>
+			</then>
+		</if>
+	</target>	
+
+<!--
+	The createDataSources target creates all the Data Sources
+  related to properties files into the ${DataSourcesDir} directory. 
+	-->
+	<target name="createDataSources">
+		<foreach target="createDataSource" param="theFile">
+			<path>
+				<fileset dir="${DataSourcesDir}">
+					<include name="**/*.${originalExt}"/>
+				</fileset>
+			</path>
+		</foreach>
+	</target>
+
+	<target name="createDataSource"  description="Create the specified Data Sources">		
+		<echo message="--- Creating a Data Source using the ${theFile} file. ---"/>		
+<!--
+		<wsadmin script="${basedir.unix}/scripts/resources/CreateDatasource.py" lang="jython" properties="${basedir.unix}/scripts/builder/Resources.properties" port="${soapPort}"  conntype="soap" user="${adminID}" password="${adminPasswd}" failonerror="true">
+			<arg value="${theFile}"/>
+		</wsadmin>
+	-->
+		<exec executable="${was.admin}" resultproperty="result" failonerror="false">
+			<arg line="-username ${adminID} -password ${adminPasswd} -f ${basedir.unix}/scripts/resources/CreateDatasource.py ${theFile} -lang jython -port ${soapPort} -conntype soap -javaoption -Dwsadmin.script.libraries=${basedir.unix}/scripts/info"/>
+		</exec>
+		<echo>Result: ${result}</echo>
+		<if>
+			<and>
+				<isset property="result"/>
+				<equals arg1="${result}" arg2="0" />
+			</and>
+			<then>
+				<var name="baseFile" value="" unset="true"/>
+				<basename property="baseFile" file="${theFile}"/>
+				<antcall target="markFilesProcessed">
+					<param name="filesFromDir" value="${basedir.unix}/${DataSourcesDir}"/>
+					<param name="filesToDir" value="${basedir.unix}/${DataSourcesDir}"/>
+					<param name="filesToMove" value="${baseFile}"/>
+				</antcall>
+			</then>
+		</if>
+	</target>	
+
+<!--
+	The createJDBCProviders target creates all the JDBC Providers 
+  related to properties files into the ${JDBCProvidersDir} directory. 
+	-->
+	<target name="createJDBCProviders">
+		<foreach target="createJDBCProvider" param="theFile">
+			<path>
+				<fileset dir="${basedir.unix}/${JDBCProvidersDir}">
+					<include name="**/*.${originalExt}"/>
+				</fileset>
+			</path>
+		</foreach>
+	</target>
+
+	<target name="createJDBCProvider"  description="Create the specified JDBC Provider">		
+		<echo message="--- Creating a JDBC Provider using the ${theFile} file. ---"/>		
+<!--
+		<wsadmin script="${basedir.unix}/scripts/resources/CreateJDBCProvider.py" lang="jython" properties="${basedir.unix}/scripts/builder/Resources.properties" port="${soapPort}"  conntype="soap" user="${adminID}" password="${adminPasswd}" failonerror="true">
+			<arg value="${theFile}"/>
+		</wsadmin>
+	-->
+		<exec executable="${was.admin}" resultproperty="result" failonerror="false">
+			<arg line="-username ${adminID} -password ${adminPasswd} -f ${basedir.unix}/scripts/resources/CreateJDBCProvider.py ${theFile} -lang jython -port ${soapPort} -conntype soap -javaoption -Dwsadmin.script.libraries=${basedir.unix}/scripts/info"/>
+		</exec>
+		<echo>Result: ${result}</echo>
+		<if>
+			<and>
+				<isset property="result"/>
+				<equals arg1="${result}" arg2="0" />
+			</and>
+			<then>
+				<var name="baseFile" value="" unset="true"/>
+				<basename property="baseFile" file="${theFile}"/>
+				<antcall target="markFilesProcessed">
+					<param name="filesFromDir" value="${basedir.unix}/${JDBCProvidersDir}"/>
+					<param name="filesToDir" value="${basedir.unix}/${JDBCProvidersDir}"/>
+					<param name="filesToMove" value="${baseFile}"/>
+				</antcall>
+			</then>
+		</if>
+	</target>	
+
+<!--
+	The createNameSpaceBindings target creates all the name Space Bindings
+  related to properties files into the ${NameSpaceBindDir} directory. 
+	-->
+	<target name="createNameSpaceBindings">
+		<foreach target="createNameSpaceBinding" param="theFile">
+			<path>
+				<fileset dir="${basedir.unix}/${NameSpaceBindDir}">
+					<include name="**/*.${originalExt}"/>
+				</fileset>
+			</path>
+		</foreach>
+	</target>
+
+	<target name="createNameSpaceBinding"  description="Create the specified Name Space Binding">		
+		<echo message="--- Creating a Name Space Binding using the ${theFile} file. ---"/>		
+<!--
+		<wsadmin script="${basedir.unix}/scripts/resources/CreateNameSpaceBinding.py" lang="jython" properties="${basedir.unix}/scripts/builder/Resources.properties" port="${soapPort}"  conntype="soap" user="${adminID}" password="${adminPasswd}" failonerror="true">
+			<arg value="${theFile}"/>
+		</wsadmin>
+	-->
+		<exec executable="${was.admin}" resultproperty="result" failonerror="false">
+			<arg line="-username ${adminID} -password ${adminPasswd} -f ${basedir.unix}/scripts/resources/CreateNameSpaceBinding.py ${theFile} -lang jython -port ${soapPort} -conntype soap -javaoption -Dwsadmin.script.libraries=${basedir.unix}/scripts/info"/>
+		</exec>
+		<echo>Result: ${result}</echo>
+		<if>
+			<and>
+				<isset property="result"/>
+				<equals arg1="${result}" arg2="0" />
+			</and>
+			<then>
+				<var name="baseFile" value="" unset="true"/>
+				<basename property="baseFile" file="${theFile}"/>
+				<antcall target="markFilesProcessed">
+					<param name="filesFromDir" value="${basedir.unix}/${NameSpaceBindDir}"/>
+					<param name="filesToDir" value="${basedir.unix}/${NameSpaceBindDir}"/>
+					<param name="filesToMove" value="${baseFile}"/>
+				</antcall>
+			</then>
+		</if>
+	</target>	
+
+<!--
+	The createQueues target creates all the Queues 
+  related to properties files into the ${QueuesDir} directory. 
+	-->
+	<target name="createQueues">
+		<foreach target="createQueue" param="theFile">
+			<path>
+				<fileset dir="${basedir.unix}/${QueuesDir}">
+					<include name="**/*.${originalExt}"/>
+				</fileset>
+			</path>
+		</foreach>
+	</target>
+
+	<target name="createQueue"  description="Create the specified Queue">		
+		<echo message="--- Creating a Queue using the ${theFile} file. ---"/>		
+<!--
+		<wsadmin script="${basedir.unix}/scripts/resources/CreateQueue.py" lang="jython" properties="${basedir.unix}/scripts/builder/Resources.properties" port="${soapPort}"  conntype="soap" user="${adminID}" password="${adminPasswd}" failonerror="true">
+			<arg value="${theFile}"/>
+		</wsadmin>
+	-->
+		<exec executable="${was.admin}" resultproperty="result" failonerror="false">
+			<arg line="-username ${adminID} -password ${adminPasswd} -f ${basedir.unix}/scripts/resources/CreateQueue.py ${theFile} -lang jython -port ${soapPort} -conntype soap -javaoption -Dwsadmin.script.libraries=${basedir.unix}/scripts/info"/>
+		</exec>
+		<echo>Result: ${result}</echo>
+		<if>
+			<and>
+				<isset property="result"/>
+				<equals arg1="${result}" arg2="0" />
+			</and>
+			<then>
+				<var name="baseFile" value="" unset="true"/>
+				<basename property="baseFile" file="${theFile}"/>
+				<antcall target="markFilesProcessed">
+					<param name="filesFromDir" value="${basedir.unix}/${QueuesDir}"/>
+					<param name="filesToDir" value="${basedir.unix}/${QueuesDir}"/>
+					<param name="filesToMove" value="${baseFile}"/>
+				</antcall>
+			</then>
+		</if>
+	</target>	
+
+<!--
+	The createTopics target creates all the Topics 
+  related to properties files into the ${TopicsDir} directory. 
+	-->
+	<target name="createTopics">
+		<foreach target="createTopic" param="theFile">
+			<path>
+				<fileset dir="${basedir.unix}/${TopicsDir}">
+					<include name="**/*.${originalExt}"/>
+				</fileset>
+			</path>
+		</foreach>
+	</target>
+
+	<target name="createTopic"  description="Create the specified Topic">		
+		<echo message="--- Creating a Topic using the ${theFile} file. ---"/>		
+<!--
+		<wsadmin script="${basedir.unix}/scripts/resources/CreateTopic.py" lang="jython" properties="${basedir.unix}/scripts/builder/Resources.properties" port="${soapPort}"  conntype="soap" user="${adminID}" password="${adminPasswd}" failonerror="true">
+			<arg value="${theFile}"/>
+		</wsadmin>
+	-->
+		<exec executable="${was.admin}" resultproperty="result" failonerror="false">
+			<arg line="-username ${adminID} -password ${adminPasswd} -f ${basedir.unix}/scripts/resources/CreateTopic.py ${theFile} -lang jython -port ${soapPort} -conntype soap -javaoption -Dwsadmin.script.libraries=${basedir.unix}/scripts/info"/>
+		</exec>
+		<echo>Result: ${result}</echo>
+		<if>
+			<and>
+				<isset property="result"/>
+				<equals arg1="${result}" arg2="0" />
+			</and>
+			<then>
+				<var name="baseFile" value="" unset="true"/>
+				<basename property="baseFile" file="${theFile}"/>
+				<antcall target="markFilesProcessed">
+					<param name="filesFromDir" value="${basedir.unix}/${TopicsDir}"/>
+					<param name="filesToDir" value="${basedir.unix}/${TopicsDir}"/>
+					<param name="filesToMove" value="${baseFile}"/>
+				</antcall>
+			</then>
+		</if>
+	</target>	
+
+<!--
+	The createURLs target creates all the URLs
+  related to properties files into the ${URLsDir} directory. 
+	-->
+	<target name="createURLs">
+		<foreach target="createURL" param="theFile">
+			<path>
+				<fileset dir="${basedir.unix}/${URLsDir}">
+					<include name="**/*.${originalExt}"/>
+				</fileset>
+			</path>
+		</foreach>
+	</target>
+
+	<target name="createURL"  description="Create the specified URL">		
+		<echo message="--- Creating an URL using the ${theFile} file. ---"/>		
+<!--
+		<wsadmin script="${basedir.unix}/scripts/resources/CreateURLS.py" lang="jython" properties="${basedir.unix}/scripts/builder/Resources.properties" port="${soapPort}"  conntype="soap" user="${adminID}" password="${adminPasswd}" failonerror="true">
+			<arg value="${theFile}"/>
+		</wsadmin>
+	-->
+		<exec executable="${was.admin}" resultproperty="result" failonerror="false">
+			<arg line="-username ${adminID} -password ${adminPasswd} -f ${basedir.unix}/scripts/resources/CreateURLS.py ${theFile} -lang jython -port ${soapPort} -conntype soap -javaoption -Dwsadmin.script.libraries=${basedir.unix}/scripts/info"/>
+		</exec>
+		<echo>Result: ${result}</echo>
+		<if>
+			<and>
+				<isset property="result"/>
+				<equals arg1="${result}" arg2="0" />
+			</and>
+			<then>
+				<var name="baseFile" value="" unset="true"/>
+				<basename property="baseFile" file="${theFile}"/>
+				<antcall target="markFilesProcessed">
+					<param name="filesFromDir" value="${basedir.unix}/${URLsDir}"/>
+					<param name="filesToDir" value="${basedir.unix}/${URLsDir}"/>
+					<param name="filesToMove" value="${baseFile}"/>
+				</antcall>
+			</then>
+		</if>
+	</target>	
+
+	<target name="markResourcesProcessed"  depends="selectResource" description="Ask to users what resources to mark as processed">
+		<antcall target="markProcessed-${resourceType}"/> 
+	</target> 
+
+	<target name="markResourcesNotProcessed"  depends="selectResource" description="Ask to users what resources to mark as not processed">
+		<antcall target="markNotProcessed-${resourceType}"/> 
+	</target> 
+
+	<target name="copyResources"  depends="selectResource,confirmDeletion" description="Ask to users what resources to copy from the read folders to the creation folders">
+		<if>
+			<and>
+				<isset property="deletion.choice"/>
+				<equals arg1="${deletion.choice}" arg2="Y" />
+			</and>
+			<then>
+				<antcall target="clearInput-${resourceType}"/>
+			</then>
+		</if>
+		<antcall target="copyResources-${resourceType}"/> 
+	</target> 
+
+	<target name="clearOutput"  depends="selectResource" description="Ask to users what resources delete from the read (output) folders">
+		<antcall target="clearOutput-${resourceType}"/> 
+	</target> 
+
+	<target name="clearInput"  depends="selectResource" description="Ask to users what resources delete from the create (input) folders">
+		<antcall target="clearInput-${resourceType}"/> 
+	</target> 
+
+	<target name="selectResource"  description="Get user input">
+		<echo>
+  On which resources do you want to operate? 
+    A.   Activation Specifications
+    C.   Connection Factories
+    D.   Data Sources
+    J.   JDBC Providers
+    N.   Name Space Bindings
+    Q.   Queues
+    T.   Topics
+    U.   URLs
+    ALL. All resources
+		</echo>
+    <input message=" "
+      validargs="A,C,D,J,N,Q,T,U,ALL" 
+      addproperty="resource.choice"/>
+    <condition property="resourceType" value="AS"> 
+      <equals arg1="${resource.choice}" arg2="A"/> 
+    </condition>  
+    <condition property="resourceType" value="CF"> 
+      <equals arg1="${resource.choice}" arg2="C"/> 
+    </condition>  
+    <condition property="resourceType" value="DS"> 
+      <equals arg1="${resource.choice}" arg2="D"/> 
+    </condition>  
+    <condition property="resourceType" value="JDBCProvider"> 
+      <equals arg1="${resource.choice}" arg2="J"/> 
+    </condition>  
+    <condition property="resourceType" value="NameSpaceBindings"> 
+      <equals arg1="${resource.choice}" arg2="N"/> 
+    </condition>  
+    <condition property="resourceType" value="QUEUE"> 
+      <equals arg1="${resource.choice}" arg2="Q"/> 
+    </condition>  
+    <condition property="resourceType" value="TOPIC"> 
+      <equals arg1="${resource.choice}" arg2="T"/> 
+    </condition>  
+    <condition property="resourceType" value="URLS"> 
+      <equals arg1="${resource.choice}" arg2="U"/> 
+    </condition>  
+    <condition property="resourceType" value="ALL"> 
+      <equals arg1="${resource.choice}" arg2="ALL"/> 
+    </condition>  
+		<echo>Selected resource: ${resourceType}</echo>
+ 	</target>
+
+  <target name="markProcessed-AS" description="Mark as processed resources."> 
+		<echo message="--- Mark as processed ${resourceType}. ---"/>		
+		<antcall target="markFilesProcessed">
+			<param name="filesFromDir" value="${basedir.unix}/${ActSpecsDir}"/>
+			<param name="filesToDir" value="${basedir.unix}/${ActSpecsDir}"/>
+			<param name="filesToMove" value="*"/>
+		</antcall>
+	</target>
+
+  <target name="markProcessed-CF" description="Mark as processed resources."> 
+		<echo message="--- Mark as processed ${resourceType}. ---"/>		
+		<antcall target="markFilesProcessed">
+			<param name="filesFromDir" value="${basedir.unix}/${ConnFactoriesDir}"/>
+			<param name="filesToDir" value="${basedir.unix}/${ConnFactoriesDir}"/>
+			<param name="filesToMove" value="*"/>
+		</antcall>
+	</target>
+
+  <target name="markProcessed-DS" description="Mark as processed resources."> 
+		<echo message="--- Mark as processed ${resourceType}. ---"/>		
+		<antcall target="markFilesProcessed">
+			<param name="filesFromDir" value="${basedir.unix}/${DataSourcesDir}"/>
+			<param name="filesToDir" value="${basedir.unix}/${DataSourcesDir}"/>
+			<param name="filesToMove" value="*"/>
+		</antcall>
+	</target>
+
+  <target name="markProcessed-JDBCProvider" description="Mark as processed resources."> 
+		<echo message="--- Mark as processed ${resourceType}. ---"/>		
+		<antcall target="markFilesProcessed">
+			<param name="filesFromDir" value="${basedir.unix}/${JDBCProvidersDir}"/>
+			<param name="filesToDir" value="${basedir.unix}/${JDBCProvidersDir}"/>
+			<param name="filesToMove" value="*"/>
+		</antcall>
+	</target>
+
+  <target name="markProcessed-NameSpaceBindings" description="Mark as processed resources."> 
+		<echo message="--- Mark as processed ${resourceType}. ---"/>		
+		<antcall target="markFilesProcessed">
+			<param name="filesFromDir" value="${basedir.unix}/${NameSpaceBindDir}"/>
+			<param name="filesToDir" value="${basedir.unix}/${NameSpaceBindDir}"/>
+			<param name="filesToMove" value="*"/>
+		</antcall>
+	</target>
+
+  <target name="markProcessed-QUEUE" description="Mark as processed resources."> 
+		<echo message="--- Mark as processed ${resourceType}. ---"/>		
+		<antcall target="markFilesProcessed">
+			<param name="filesFromDir" value="${basedir.unix}/${QueuesDir}"/>
+			<param name="filesToDir" value="${basedir.unix}/${QueuesDir}"/>
+			<param name="filesToMove" value="*"/>
+		</antcall>
+	</target>
+
+  <target name="markProcessed-TOPIC" description="Mark as processed resources."> 
+		<echo message="--- Mark as processed ${resourceType}. ---"/>		
+		<antcall target="markFilesProcessed">
+			<param name="filesFromDir" value="${basedir.unix}/${TopicsDir}"/>
+			<param name="filesToDir" value="${basedir.unix}/${TopicsDir}"/>
+			<param name="filesToMove" value="*"/>
+		</antcall>
+	</target>
+
+  <target name="markProcessed-URLS" description="Mark as processed resources."> 
+		<echo message="--- Mark as processed ${resourceType}. ---"/>		
+		<antcall target="markFilesProcessed">
+			<param name="filesFromDir" value="${URLsDir}"/>
+			<param name="filesToDir" value="${URLsDir}"/>
+			<param name="filesToMove" value="*"/>
+		</antcall>
+	</target>
+
+  <target name="markProcessed-ALL" depends="markProcessed-AS, markProcessed-CF, markProcessed-DS, markProcessed-JDBCProvider, markProcessed-NameSpaceBindings, markProcessed-QUEUE, markProcessed-TOPIC, markProcessed-URLS" description="Mark as processed resources."> 
+	</target>
+
+	<target name="markFilesProcessed"  description="Marks all the files as processed">		
+		<echo message="--- Moving files ${filesToMove} from ${filesFromDir} to ${filesToDir} with ${processedExt} extension. ---"/>		
+		<move todir="${filesToDir}">
+			<fileset dir="${filesFromDir}">
+				<include name="**/${filesToMove}"/>
+			</fileset>
+			<mapper type="glob" from="*.${originalExt}" to="*.${processedExt}"/>
+		</move>
+	</target>	
+
+  <target name="markNotProcessed-AS" description="Mark as processed resources."> 
+		<echo message="--- Mark as processed ${resourceType}. ---"/>		
+		<antcall target="markFilesNotProcessed">
+			<param name="filesFromDir" value="${ActSpecsDir}"/>
+			<param name="filesToDir" value="${ActSpecsDir}"/>
+			<param name="filesToMove" value="*"/>
+		</antcall>
+	</target>
+
+  <target name="markNotProcessed-CF" description="Mark as processed resources."> 
+		<echo message="--- Mark as processed ${resourceType}. ---"/>		
+		<antcall target="markFilesNotProcessed">
+			<param name="filesFromDir" value="${ConnFactoriesDir}"/>
+			<param name="filesToDir" value="${ConnFactoriesDir}"/>
+			<param name="filesToMove" value="*"/>
+		</antcall>
+	</target>
+
+  <target name="markNotProcessed-DS" description="Mark as processed resources."> 
+		<echo message="--- Mark as processed ${resourceType}. ---"/>		
+		<antcall target="markFilesNotProcessed">
+			<param name="filesFromDir" value="${DataSourcesDir}"/>
+			<param name="filesToDir" value="${DataSourcesDir}"/>
+			<param name="filesToMove" value="*"/>
+		</antcall>
+	</target>
+
+  <target name="markNotProcessed-JDBCProvider" description="Mark as processed resources."> 
+		<echo message="--- Mark as processed ${resourceType}. ---"/>		
+		<antcall target="markFilesNotProcessed">
+			<param name="filesFromDir" value="${JDBCProvidersDir}"/>
+			<param name="filesToDir" value="${JDBCProvidersDir}"/>
+			<param name="filesToMove" value="*"/>
+		</antcall>
+	</target>
+
+  <target name="markNotProcessed-NameSpaceBindings" description="Mark as processed resources."> 
+		<echo message="--- Mark as processed ${resourceType}. ---"/>		
+		<antcall target="markFilesNotProcessed">
+			<param name="filesFromDir" value="${NameSpaceBindDir}"/>
+			<param name="filesToDir" value="${NameSpaceBindDir}"/>
+			<param name="filesToMove" value="*"/>
+		</antcall>
+	</target>
+
+  <target name="markNotProcessed-QUEUE" description="Mark as processed resources."> 
+		<echo message="--- Mark as processed ${resourceType}. ---"/>		
+		<antcall target="markFilesNotProcessed">
+			<param name="filesFromDir" value="${QueuesDir}"/>
+			<param name="filesToDir" value="${QueuesDir}"/>
+			<param name="filesToMove" value="*"/>
+		</antcall>
+	</target>
+
+  <target name="markNotProcessed-TOPIC" description="Mark as processed resources."> 
+		<echo message="--- Mark as processed ${resourceType}. ---"/>		
+		<antcall target="markFilesNotProcessed">
+			<param name="filesFromDir" value="${TopicsDir}"/>
+			<param name="filesToDir" value="${TopicsDir}"/>
+			<param name="filesToMove" value="*"/>
+		</antcall>
+	</target>
+
+  <target name="markNotProcessed-URLS" description="Mark as processed resources."> 
+		<echo message="--- Mark as processed ${resourceType}. ---"/>		
+		<antcall target="markFilesNotProcessed">
+			<param name="filesFromDir" value="${URLsDir}"/>
+			<param name="filesToDir" value="${URLsDir}"/>
+			<param name="filesToMove" value="*"/>
+		</antcall>
+	</target>
+
+  <target name="markNotProcessed-ALL" depends="markNotProcessed-AS, markNotProcessed-CF, markNotProcessed-DS, markNotProcessed-JDBCProvider, markNotProcessed-NameSpaceBindings, markNotProcessed-QUEUE, markNotProcessed-TOPIC, markNotProcessed-URLS" description="Mark as processed resources."> 
+	</target>
+
+	<target name="markFilesNotProcessed"  description="Marks all the files as not processed">		
+		<echo message="--- Moving files ${filesToMove} from ${filesFromDir} to ${filesToDir} with ${originalExt} extension. ---"/>		
+		<move todir="${filesToDir}">
+			<fileset dir="${filesFromDir}">
+				<include name="**/${filesToMove}"/>
+			</fileset>
+			<mapper type="glob" from="*.${processedExt}" to="*.${originalExt}"/>
+		</move>
+	</target>	
+
+  <target name="copyResources-AS" description="Copy resources from out dir to create dir."> 
+		<echo message="--- Copy ${resourceType} resources. ---"/>		
+		<copy todir="${ActSpecsDir}">
+			<fileset dir="${ActSpecsOutDir}"/>
+		</copy>
+	</target>
+
+  <target name="copyResources-CF" description="Copy resources from out dir to create dir."> 
+		<echo message="--- Copy ${resourceType} resources. ---"/>		
+		<copy todir="${ConnFactoriesDir}">
+			<fileset dir="${ConnFactoriesOutDir}"/>
+		</copy>
+	</target>
+
+  <target name="copyResources-DS" description="Copy resources from out dir to create dir."> 
+		<echo message="--- Copy ${resourceType} resources. ---"/>		
+		<copy todir="${DataSourcesDir}">
+			<fileset dir="${DataSourcesOutDir}"/>
+		</copy>
+	</target>
+
+  <target name="copyResources-JDBCProvider" description="Copy resources from out dir to create dir."> 
+		<echo message="--- Copy ${resourceType} resources. ---"/>		
+		<copy todir="${JDBCProvidersDir}">
+			<fileset dir="${JDBCProvidersOutDir}"/>
+		</copy>
+	</target>
+
+  <target name="copyResources-NameSpaceBindings" description="Copy resources from out dir to create dir."> 
+		<echo message="--- Copy ${resourceType} resources. ---"/>		
+		<copy todir="${NameSpaceBindDir}">
+			<fileset dir="${NameSpaceBindOutDir}"/>
+		</copy>
+	</target>
+
+  <target name="copyResources-QUEUE" description="Copy resources from out dir to create dir."> 
+		<echo message="--- Copy ${resourceType} resources. ---"/>		
+		<copy todir="${QueuesDir}">
+			<fileset dir="${QueuesOutDir}"/>
+		</copy>
+	</target>
+
+  <target name="copyResources-TOPIC" description="Copy resources from out dir to create dir."> 
+		<echo message="--- Copy ${resourceType} resources. ---"/>		
+		<copy todir="${TopicsDir}">
+			<fileset dir="${TopicsOutDir}"/>
+		</copy>
+	</target>
+
+  <target name="copyResources-URLS" description="Copy resources from out dir to create dir."> 
+		<echo message="--- Copy ${resourceType} resources. ---"/>		
+		<copy todir="${URLsDir}">
+			<fileset dir="${URLsOutDir}"/>
+		</copy>
+	</target>
+
+  <target name="copyResources-ALL" depends="copyResources-AS, copyResources-CF, copyResources-DS, copyResources-JDBCProvider, copyResources-NameSpaceBindings, copyResources-QUEUE, copyResources-TOPIC, copyResources-URLS" description="Mark as processed resources."> 
+	</target>
+
+  <target name="clearOutput-AS" description="Delete resources from out dir."> 
+		<echo message="--- Clear ${resourceType} resources. ---"/>		
+		<delete>
+			<fileset dir="${ActSpecsOutDir}" includes="**/*"/>
+		</delete>
+	</target>
+
+  <target name="clearOutput-CF" description="Delete resources from out dir."> 
+		<echo message="--- Clear ${resourceType} resources. ---"/>		
+		<delete>
+			<fileset dir="${ConnFactoriesOutDir}" includes="**/*"/>
+		</delete>
+	</target>
+
+  <target name="clearOutput-DS" description="Delete resources from out dir."> 
+		<echo message="--- Clear ${resourceType} resources. ---"/>		
+		<delete>
+			<fileset dir="${DataSourcesOutDir}" includes="**/*"/>
+		</delete>
+	</target>
+
+  <target name="clearOutput-JDBCProvider" description="Delete resources from out dir."> 
+		<echo message="--- Clear ${resourceType} resources. ---"/>		
+		<delete>
+			<fileset dir="${JDBCProvidersOutDir}" includes="**/*"/>
+		</delete>
+	</target>
+
+  <target name="clearOutput-NameSpaceBindings" description="Delete resources from out dir."> 
+		<echo message="--- Clear ${resourceType} resources. ---"/>		
+		<delete>
+			<fileset dir="${NameSpaceBindOutDir}" includes="**/*"/>
+		</delete>
+	</target>
+
+  <target name="clearOutput-QUEUE" description="Delete resources from out dir."> 
+		<echo message="--- Clear ${resourceType} resources. ---"/>		
+		<delete>
+			<fileset dir="${QueuesOutDir}" includes="**/*"/>
+		</delete>
+	</target>
+
+  <target name="clearOutput-TOPIC" description="Delete resources from out dir."> 
+		<echo message="--- Clear ${resourceType} resources. ---"/>		
+		<delete>
+			<fileset dir="${TopicsOutDir}" includes="**/*"/>
+		</delete>
+	</target>
+
+  <target name="clearOutput-URLS" description="Delete resources from out dir."> 
+		<echo message="--- Clear ${resourceType} resources. ---"/>		
+		<delete>
+			<fileset dir="${URLsOutDir}" includes="**/*"/>
+		</delete>
+	</target>
+
+  <target name="clearOutput-ALL" depends="clearOutput-AS, clearOutput-CF, clearOutput-DS, clearOutput-JDBCProvider, clearOutput-NameSpaceBindings, clearOutput-QUEUE, clearOutput-TOPIC, clearOutput-URLS" description="Clear output resources."> 
+	</target>
+
+  <target name="clearInput-AS" description="Delete resources from in dir."> 
+		<echo message="--- Clear ${resourceType} resources. ---"/>		
+		<delete>
+			<fileset dir="${ActSpecsDir}" includes="**/*"/>
+		</delete>
+	</target>
+
+  <target name="clearInput-CF" description="Delete resources from in dir."> 
+		<echo message="--- Clear ${resourceType} resources. ---"/>		
+		<delete>
+			<fileset dir="${ConnFactoriesDir}" includes="**/*"/>
+		</delete>
+	</target>
+
+  <target name="clearInput-DS" description="Delete resources from in dir."> 
+		<echo message="--- Clear ${resourceType} resources. ---"/>		
+		<delete>
+			<fileset dir="${DataSourcesDir}" includes="**/*"/>
+		</delete>
+	</target>
+
+  <target name="clearInput-JDBCProvider" description="Delete resources from in dir."> 
+		<echo message="--- Clear ${resourceType} resources. ---"/>		
+		<delete>
+			<fileset dir="${JDBCProvidersDir}" includes="**/*"/>
+		</delete>
+	</target>
+
+  <target name="clearInput-NameSpaceBindings" description="Delete resources from in dir."> 
+		<echo message="--- Clear ${resourceType} resources. ---"/>		
+		<delete>
+			<fileset dir="${NameSpaceBindDir}" includes="**/*"/>
+		</delete>
+	</target>
+
+  <target name="clearInput-QUEUE" description="Delete resources from in dir."> 
+		<echo message="--- Clear ${resourceType} resources. ---"/>		
+		<delete>
+			<fileset dir="${QueuesDir}" includes="**/*"/>
+		</delete>
+	</target>
+
+  <target name="clearInput-TOPIC" description="Delete resources from in dir."> 
+		<echo message="--- Clear ${resourceType} resources. ---"/>		
+		<delete>
+			<fileset dir="${TopicsDir}" includes="**/*"/>
+		</delete>
+	</target>
+
+  <target name="clearInput-URLS" description="Delete resources from in dir."> 
+		<echo message="--- Clear ${resourceType} resources. ---"/>		
+		<delete>
+			<fileset dir="${URLsDir}" includes="**/*"/>
+		</delete>
+	</target>
+
+  <target name="clearInput-ALL" depends="clearInput-AS, clearInput-CF, clearInput-DS, clearInput-JDBCProvider, clearInput-NameSpaceBindings, clearInput-QUEUE, clearInput-TOPIC, clearInput-URLS" description="Clear input resources."> 
+	</target>
+
+	<!--
+	   The installApps target install all the defined applications into the following directories:
+	   Serv1Dir
+      Serv2Dir
+      Serv3Dir
+      Serv4Dir
+	   -->
+	   <target name="installApps">
+	      <foreach target="installApp" param="theFile">
+	         <path>
+	            <fileset dir="${Serv1Dir}">
+	               <include name="**/*.${originalApp}"/>
+	            </fileset>
+	         </path>
+            <param name="ServName" value="${Serv1Name}"/>
+            <param name="ServDir" value="${Serv1Dir}"/>
+	      </foreach>
+         <foreach target="installApp" param="theFile">
+            <path>
+               <fileset dir="${Serv2Dir}">
+                  <include name="**/*.${originalApp}"/>
+               </fileset>
+            </path>
+            <param name="ServName" value="${Serv2Name}"/>
+            <param name="ServDir" value="${Serv2Dir}"/>
+         </foreach>
+            <foreach target="installApp" param="theFile">
+               <path>
+                  <fileset dir="${Serv3Dir}">
+                     <include name="**/*.${originalApp}"/>
+                  </fileset>
+               </path>
+               <param name="ServName" value="${Serv3Name}"/>
+               <param name="ServDir" value="${Serv3Dir}"/>
+            </foreach>
+            <foreach target="installApp" param="theFile">
+               <path>
+                  <fileset dir="${Serv4Dir}">
+                     <include name="**/*.${originalApp}"/>
+                  </fileset>
+               </path>
+               <param name="ServName" value="${Serv4Name}"/>
+               <param name="ServDir" value="${Serv4Dir}"/>
+            </foreach>
+	   </target>
+
+	   <target name="installApp"  description="Install applications into ${ServDir} directory">     
+	      <echo message="--- Installing an application using the ${theFile} file. ---"/>    
+
+	   	<basename property="baseAppName" file="${theFile}" suffix=".ear"/>
+         <var name="MyAppName" value="${baseAppName}App"/>
+	   	<echo message="${MyAppName}"/> 
+         <exec executable="${was.admin}" resultproperty="result" failonerror="false">
+            <arg line="-username ${adminID} -password ${adminPasswd} -f ${basedir.unix}/scripts/resources/CheckInstalledApp.py ${MyAppName} ${ServName} -lang jython -port ${soapPort} -conntype soap -javaoption -Dwsadmin.script.libraries=${basedir.unix}/scripts/info"/>
+         </exec>
+         <if>
+            <and>
+               <isset property="result"/>
+               <equals arg1="${result}" arg2="0" />
+            </and>
+            <then>
+               <echo>Installing</echo>
+               <wsadmin script="${basedir.unix}/scripts/resources/adminApp.py" lang="jython" port="${soapPort}"  conntype="soap" user="${adminID}" password="${adminPasswd}" failonerror="true">
+                  <arg value="INSTALL"/>
+                  <arg value="${MyAppName}"/>
+                  <arg value="${theFile}"/>
+                  <arg value="-targetObjects=${ServName}"/>
+               </wsadmin>
+               <var name="baseFile" value="" unset="true"/>
+               <basename property="baseFile" file="${theFile}"/>
+               <antcall target="markAppFilesProcessed">
+                  <param name="filesFromDir" value="${ServDir}"/>
+                  <param name="filesToDir" value="${ServDir}"/>
+                  <param name="filesToMove" value="${baseFile}"/>
+               </antcall>
+            </then>
+         	<elseif>
+               <and>
+                  <isset property="result"/>
+                  <equals arg1="${result}" arg2="1" />
+               </and>
+               <then>
+                  <echo>Application already installed, updating it</echo>
+                  <wsadmin script="${basedir.unix}/scripts/resources/adminApp.py" lang="jython" port="${soapPort}"  conntype="soap" user="${adminID}" password="${adminPasswd}" failonerror="true">
+                     <arg value="UPDATE"/>
+                     <arg value="${MyAppName}"/>
+                     <arg value="${theFile}"/>
+                  </wsadmin>
+                  <var name="baseFile" value="" unset="true"/>
+                  <basename property="baseFile" file="${theFile}"/>
+                  <antcall target="markAppFilesProcessed">
+                     <param name="filesFromDir" value="${ServDir}"/>
+                     <param name="filesToDir" value="${ServDir}"/>
+                     <param name="filesToMove" value="${baseFile}"/>
+                  </antcall>
+               </then>
+         	</elseif>
+         </if>
+	   </target>   
+
+	<target name="markAppsProcessed"  depends="selectServer" description="Ask to users what applications to mark as processed">
+      <antcall target="markAppProcessed-${ServerName}"/> 
+   </target> 
+
+   <target name="markAppsNotProcessed"  depends="selectServer" description="Ask to users what applications to mark as not processed">
+      <antcall target="markAppNotProcessed-${ServerName}"/> 
+   </target> 
+
+   <target name="selectServer"  description="Get user input">
+      <echo>
+  On which servers do you want to operate? 
+    1.   Server 1
+    2.   Server 2
+    3.   Server 3
+    4.   Server 4
+    ALL. All servers
+      </echo>
+    <input message=" "
+      validargs="1,2,3,4,ALL" 
+      addproperty="server.choice"/>
+    <condition property="ServerName" value="Serv1"> 
+      <equals arg1="${server.choice}" arg2="1"/> 
+    </condition>  
+    <condition property="ServerName" value="Serv2"> 
+      <equals arg1="${server.choice}" arg2="2"/> 
+    </condition>  
+    <condition property="ServerName" value="Serv3"> 
+      <equals arg1="${server.choice}" arg2="3"/> 
+    </condition>  
+    <condition property="ServerName" value="Serv4"> 
+      <equals arg1="${server.choice}" arg2="4"/> 
+    </condition>  
+    <condition property="ServerName" value="ALL"> 
+      <equals arg1="${server.choice}" arg2="ALL"/> 
+    </condition>  
+      <echo>Selected resource: ${ServerName}</echo>
+   </target>
+
+  <target name="markAppProcessed-Serv1" description="Mark as processed applications."> 
+      <echo message="--- Mark as processed ${ServerName}. ---"/>      
+      <antcall target="markAppFilesProcessed">
+         <param name="filesFromDir" value="${Serv1Dir}"/>
+         <param name="filesToDir" value="${Serv1Dir}"/>
+         <param name="filesToMove" value="*"/>
+      </antcall>
+   </target>
+
+  <target name="markAppProcessed-Serv2" description="Mark as processed applications."> 
+      <echo message="--- Mark as processed ${ServerName}. ---"/>      
+      <antcall target="markAppFilesProcessed">
+         <param name="filesFromDir" value="${Serv2Dir}"/>
+         <param name="filesToDir" value="${Serv2Dir}"/>
+         <param name="filesToMove" value="*"/>
+      </antcall>
+   </target>
+
+  <target name="markAppProcessed-Serv3" description="Mark as processed applications."> 
+      <echo message="--- Mark as processed ${ServerName}. ---"/>      
+      <antcall target="markAppFilesProcessed">
+         <param name="filesFromDir" value="${Serv3Dir}"/>
+         <param name="filesToDir" value="${Serv3Dir}"/>
+         <param name="filesToMove" value="*"/>
+      </antcall>
+   </target>
+
+  <target name="markAppProcessed-Serv4" description="Mark as processed applications."> 
+      <echo message="--- Mark as processed ${ServerName}. ---"/>      
+      <antcall target="markAppFilesProcessed">
+         <param name="filesFromDir" value="${Serv4Dir}"/>
+         <param name="filesToDir" value="${Serv4Dir}"/>
+         <param name="filesToMove" value="*"/>
+      </antcall>
+   </target>
+
+  <target name="markAppProcessed-ALL" depends="markAppProcessed-Serv1, markAppProcessed-Serv2, markAppProcessed-Serv3, markAppProcessed-Serv4" description="Mark as processed applications."> 
+   </target>
+
+   <target name="markAppFilesProcessed"  description="Marks all the files as processed">     
+      <echo message="--- Moving files ${filesToMove} from ${filesFromDir} to ${filesToDir} with ${processedExt} extension. ---"/>      
+      <move todir="${filesToDir}">
+         <fileset dir="${filesFromDir}">
+            <include name="**/${filesToMove}"/>
+         </fileset>
+         <mapper type="glob" from="*.${originalApp}" to="*.${processedExt}"/>
+      </move>
+   </target>   
+
+	  <target name="markAppNotProcessed-Serv1" description="Mark as not processed applications."> 
+	      <echo message="--- Mark as not processed ${ServerName}. ---"/>      
+	      <antcall target="markAppFilesNotProcessed">
+	         <param name="filesFromDir" value="${Serv1Dir}"/>
+	         <param name="filesToDir" value="${Serv1Dir}"/>
+	         <param name="filesToMove" value="*"/>
+	      </antcall>
+	   </target>
+
+   <target name="markAppNotProcessed-Serv2" description="Mark as not processed applications."> 
+       <echo message="--- Mark as not processed ${ServerName}. ---"/>      
+       <antcall target="markAppFilesNotProcessed">
+          <param name="filesFromDir" value="${Serv2Dir}"/>
+          <param name="filesToDir" value="${Serv2Dir}"/>
+          <param name="filesToMove" value="*"/>
+       </antcall>
+    </target>
+
+   <target name="markAppNotProcessed-Serv3" description="Mark as not processed applications."> 
+       <echo message="--- Mark as not processed ${ServerName}. ---"/>      
+       <antcall target="markAppFilesNotProcessed">
+          <param name="filesFromDir" value="${Serv3Dir}"/>
+          <param name="filesToDir" value="${Serv3Dir}"/>
+          <param name="filesToMove" value="*"/>
+       </antcall>
+    </target>
+
+   <target name="markAppNotProcessed-Serv4" description="Mark as not processed applications."> 
+       <echo message="--- Mark as not processed ${ServerName}. ---"/>      
+       <antcall target="markAppFilesNotProcessed">
+          <param name="filesFromDir" value="${Serv4Dir}"/>
+          <param name="filesToDir" value="${Serv4Dir}"/>
+          <param name="filesToMove" value="*"/>
+       </antcall>
+    </target>
+
+	  <target name="markAppNotProcessed-ALL" depends="markAppNotProcessed-Serv1, markAppNotProcessed-Serv2, markAppNotProcessed-Serv3, markAppNotProcessed-Serv4" description="Mark as not processed applications."> 
+	   </target>
+
+	   <target name="markAppFilesNotProcessed"  description="Marks all the files as not processed">     
+	      <echo message="--- Moving files ${filesToMove} from ${filesFromDir} to ${filesToDir} with ${originalApp} extension. ---"/>      
+	      <move todir="${filesToDir}">
+	         <fileset dir="${filesFromDir}">
+	            <include name="**/${filesToMove}"/>
+	         </fileset>
+	         <mapper type="glob" from="*.${processedExt}" to="*.${originalApp}"/>
+	      </move>
+	   </target>   
+
+
+	<!--
+	   -->
+
+</project>

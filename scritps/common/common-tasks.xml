@@ -1,0 +1,178 @@
+<project name="install-framework-common-tasks" default="help" basedir=".">
+
+<macrodef name="propertycopy">
+  <attribute name="name"/>
+  <attribute name="from"/>
+  <sequential>
+    <property name="@{name}" value="${@{from}}"/>
+  </sequential>
+</macrodef>
+
+	<macrodef name="prop-require">
+		<attribute name="prop"/>
+		<sequential>
+			<fail message="Property &quot;@{prop}&quot; must be set">
+				<condition>
+					<not>
+						<isset property="@{prop}"/>
+					</not>
+			   </condition>
+			</fail>
+
+			<fail message="Property &quot;@{prop}&quot; must not be empty">
+				<condition>
+					<equals arg1="${@{prop}}" arg2=""/>
+			   </condition>
+			</fail>
+		</sequential>
+	</macrodef>
+	
+	
+	<target name="-change-properties">
+	    <!-- <if> -->
+            <!-- <available file="${properties.replace.directory}/${component.server}-${component.name}.properties"/> -->
+            <!-- <then> -->
+                <!-- <replace dir="${replace.directory}" replacefilterfile="${properties.replace.directory}/${component.server}-${component.name}.properties"> -->
+                    <!-- <include name="**/*.xml"/> -->
+                    <!-- <include name="**/*.xmi"/> -->
+                    <!-- <include name="**/*.sql"/> -->
+                    <!-- <include name="**/*.properties"/> -->
+                    <!-- <include name="**/*.py"/> -->
+                    <!-- <include name="**/*.sh"/> -->
+                    <!-- <include name="**/*.bat"/> -->
+                    <!-- <include name="**/*.profile"/> -->
+                    <!-- <include name="**/*.conf"/> -->
+                <!-- </replace> -->
+            <!-- </then> -->
+        <!-- </if> -->
+        <!-- <if> -->
+            <!-- <available file="${properties.replace.directory}/${component.server}-default.properties"/> -->
+            <!-- <then> -->
+                <!-- <replace dir="${replace.directory}" replacefilterfile="${properties.replace.directory}/${component.server}-default.properties"> -->
+                    <!-- <include name="**/*.xml"/> -->
+                    <!-- <include name="**/*.xmi"/> -->
+                    <!-- <include name="**/*.sql"/> -->
+                    <!-- <include name="**/*.properties"/> -->
+                    <!-- <include name="**/*.py"/> -->
+                    <!-- <include name="**/*.sh"/> -->
+                    <!-- <include name="**/*.bat"/> -->
+                    <!-- <include name="**/*.profile"/> -->
+                    <!-- <include name="**/*.conf"/> -->
+                <!-- </replace> -->
+            <!-- </then> -->
+        <!-- </if> -->
+        <!-- <if> -->
+            <!-- <available file="${properties.replace.directory}/${environment.name}-${component.name}.properties"/> -->
+            <!-- <then> -->
+                <!-- <replace dir="${replace.directory}" replacefilterfile="${properties.replace.directory}/${environment.name}-${component.name}.properties"> -->
+                    <!-- <include name="**/*.xml"/> -->
+                    <!-- <include name="**/*.xmi"/> -->
+                    <!-- <include name="**/*.sql"/> -->
+                    <!-- <include name="**/*.properties"/> -->
+                    <!-- <include name="**/*.py"/> -->
+                    <!-- <include name="**/*.sh"/> -->
+                    <!-- <include name="**/*.bat"/> -->
+                    <!-- <include name="**/*.profile"/> -->
+                    <!-- <include name="**/*.conf"/> -->
+                <!-- </replace> -->
+            <!-- </then> -->
+        <!-- </if> -->
+        <!-- <if> -->
+            <!-- <available file="${properties.replace.directory}/${component.name}-default.properties"/> -->
+            <!-- <then> -->
+                <!-- <replace dir="${replace.directory}" replacefilterfile="${properties.replace.directory}/${component.name}-default.properties"> -->
+                    <!-- <include name="**/*.xml"/> -->
+                    <!-- <include name="**/*.xmi"/> -->
+                    <!-- <include name="**/*.sql"/> -->
+                    <!-- <include name="**/*.properties"/> -->
+                    <!-- <include name="**/*.py"/> -->
+                    <!-- <include name="**/*.sh"/> -->
+                    <!-- <include name="**/*.bat"/> -->
+                    <!-- <include name="**/*.profile"/> -->
+                    <!-- <include name="**/*.conf"/> -->
+                <!-- </replace> -->
+            <!-- </then> -->
+        <!-- </if> -->
+        <if>
+            <available file="${properties.replace.directory}/${environment.name}-${env.local}-${env.domain}-default.properties"/>
+            <then>
+				<echo level="info" message="Replacing file tokens at ${properties.replace.directory}/${environment.name}-${env.local}-${env.domain}-default.properties"/>
+                <replace dir="${replace.directory}" replacefilterfile="${properties.replace.directory}/${environment.name}-${env.local}-${env.domain}-default.properties">
+                    <include name="**/*.xml"/>
+                    <include name="**/*.xmi"/>
+                    <include name="**/*.sql"/>
+                    <include name="**/*.properties"/>
+                    <include name="**/*.py"/>
+                    <include name="**/*.sh"/>
+                    <include name="**/*.bat"/>
+                    <include name="**/*.profile"/>
+                    <include name="**/*.conf"/>
+					<include name="**/*.config"/>
+                </replace>
+            </then>
+        </if>		
+		
+        <if>
+            <available file="${properties.replace.directory}/${environment.name}-${env.local}-default.properties"/>
+            <then>
+				<echo level="info" message="Replacing file tokens at ${properties.replace.directory}/${environment.name}-${env.domain}-default.properties"/>
+                <replace dir="${replace.directory}" replacefilterfile="${properties.replace.directory}/${environment.name}-${env.local}-default.properties">
+                    <include name="**/*.xml"/>
+                    <include name="**/*.xmi"/>
+                    <include name="**/*.sql"/>
+                    <include name="**/*.properties"/>
+                    <include name="**/*.py"/>
+                    <include name="**/*.sh"/>
+                    <include name="**/*.bat"/>
+                    <include name="**/*.profile"/>
+                    <include name="**/*.conf"/>
+					<include name="**/*.config"/>
+                </replace>
+            </then>
+        </if>		
+        <if>
+            <available file="${properties.replace.directory}/${environment.name}-default.properties"/>
+            <then>
+				<echo level="info" message="Replacing file tokens at ${properties.replace.directory}/${environment.name}-default.properties"/>
+                <replace dir="${replace.directory}" replacefilterfile="${properties.replace.directory}/${environment.name}-default.properties">
+                    <include name="**/*.xml"/>
+                    <include name="**/*.xmi"/>
+                    <include name="**/*.sql"/>
+                    <include name="**/*.properties"/>
+                    <include name="**/*.py"/>
+                    <include name="**/*.sh"/>
+                    <include name="**/*.bat"/>
+                    <include name="**/*.profile"/>
+                    <include name="**/*.conf"/>
+					<include name="**/*.config"/>
+                </replace>
+            </then>
+        </if>
+        <if>
+            <available file="${properties.replace.directory}/default.properties"/>
+            <then>
+				<echo level="info" message="Replacing file tokens at ${properties.replace.directory}/default.properties"/>
+                <replace dir="${replace.directory}" replacefilterfile="${properties.replace.directory}/default.properties">
+                    <include name="**/*.xml"/>
+                    <include name="**/*.xmi"/>
+                    <include name="**/*.sql"/>
+                    <include name="**/*.properties"/>
+                    <include name="**/*.py"/>
+                    <include name="**/*.sh"/>
+                    <include name="**/*.bat"/>
+                    <include name="**/*.profile"/>
+                    <include name="**/*.conf"/>
+					<include name="**/*.config"/>
+                </replace>
+            </then>
+        </if>
+    </target>
+	
+	
+	
+	<target name="help">
+		<echo level="info" message="common-tasks library functions."/>
+	</target>
+
+
+</project>

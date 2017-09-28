@@ -1,0 +1,10 @@
+<project name="Deploy" default="build-all" basedir="."><!-- ===================================================================== 
+--><!-- define global properties -->
+<!-- ===================================================================== 
+--><property name="remoteAppName" value="ivtApp"/><property name="remoteHostName" value="hostname"/><property name="remoteServerName" value="server1"/><property name="remoteConnType" value="SOAP"/><property name="remoteUserId" value="websphereadmin"/><property name="remotePassword" value="W385phere@dm1n"/><property name="remotePort" value="8880"/><property name="mailHostName" value="mail.domain.com"/><!--<tstamp>
+	<format property="NOW" pattern="yyyy-MM-dd-HH-mm"/>
+</tstamp>
+--><!-- change this to your local installation, if different 
+--><property name="existingEar.dir" value="D:\workspace\java\jsfks\deploy"/><property name="existingEar" value="jsfks.ear"/><!-- change this to your local installation, if different 
+--><property name="ws.home.dir" value="c:/61websphere"/><property name="user.install.root" location="${ws.home.dir}"/><path id="ws.classpath"><fileset dir="${ws.home.dir}/lib" includes="**/*.jar"/></path><target name="ws.task"><taskdef name="wsStopApp" classname="com.ibm.websphere.ant.tasks.StopApplication" classpathref="ws.classpath"/></target><target name="stopApp" depends="ws.task"><wsStopApp wasHome="${ws.home.dir}" application="${remoteAppName}" server="${remoteServerName}" conntype="${remoteConnType}" host="${remoteHostName}" port="${remotePort}" user="${remoteUserId}" password="${remotePassword}"/></target><target name="build-all" depends="stopApp">
+</target></project>
