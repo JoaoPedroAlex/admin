@@ -19,5 +19,7 @@ else:
 	filename, appname, servers, clusternames, contextroot, arglist = parseargs()
 	enableDebugMessages()
 	installApplication( filename, servers, clusternames, arglist )
-	AdminApp.edit(appname, ['-CtxRootForWebMod', [[".*",".*",contextroot]]])
+	print "Contextroot: %s" %(contextroot)
+	if contextroot <> None:
+	   AdminApp.edit(appname, ['-CtxRootForWebMod', [[".*",".*",contextroot]]])
 	save()

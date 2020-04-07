@@ -1,0 +1,2 @@
+wsadmin> AdminConfig.list('Server')
+'server1(cells/PSCell1/nodes/Node1/servers/server1|server.xml#Server_1183122130078)'
