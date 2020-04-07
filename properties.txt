@@ -1,0 +1,4 @@
+appName=imxprd
+deployEar.path=C\:/Users/Administrator/IMEX/apps/imxprd.ear
+version=001
+serversList=Node1\:server1,Node1\:webserver1

@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- Licensed Materials - Property of IBM                           -->
+<!-- 5725-B69 5655-Y17 5655-Y31 5724-X98 5724-Y15 5655-V82                                     -->
+<!-- Copyright IBM Corp. 1987, 2015. All Rights Reserved            -->
+<!-- US Government Users Restricted Rights - Use, duplication or    -->
+<!-- disclosure restricted by GSA ADP Schedule Contract with        -->
+<!-- IBM Corp.                                                      -->
+
+
+<project name="setupwas" default="help" basedir=".">
+	<description>Ant build file for configuring WAS</description>
+	<!-- Properties-->
+	<!-- see file general-config.propeties. It will be loaded in init target-->
+
+	<!-- Extends the default MaxPermSize if running on a Sun JVM -->
+	<condition property="jvm.permgen.flag" value="-XX:MaxPermSize=250m">
+		<or>
+			<equals arg1="${java.vendor}" arg2="Sun Microsystems Inc." />
+			<equals arg1="${java.vendor}" arg2="Apple Inc." />
+		</or>
+	</condition>
+	<property name="jvm.permgen.flag" value="" />
+
+
+	
+<!-- redefine base.dir to unix like -->
+
+<path id="basedir.path">
+    <pathelement path="${basedir}" />
+</path>
+<pathconvert targetos="unix" property="basedir.unix" refid="basedir.path"/>
+<echo message="${basedir.unix}" />
+
+<taskdef name="antform" classname="com.sardak.antform.AntForm" classpath="${basedir.unix}/ant/antform-bin-2.0/lib/antform.jar"/>
+<taskdef name="antmenu" classname="com.sardak.antform.AntMenu" classpath="${basedir.unix}/ant/antform-bin-2.0/lib/antform.jar"/>
+<taskdef name="xmltask" classname="com.oopsconsultancy.xmltask.ant.XmlTask" classpath="${basedir.unix}/ant/lib/xmltask.jar"/>
+<!-- <taskdef resource="net/sf/antcontrib/antcontrib.properties"> -->
+<taskdef resource="net/sf/antcontrib/antlib.xml">
+	<classpath>
+		<pathelement location="${basedir.unix}/ant/lib/ant-contrib-1.0b3.jar"/>
+	</classpath>
+</taskdef>
+
+<!-- include files (all) -->
+<import file="scripts/common/was-common.xml"/>
+
+<!-- default help info -->
+
+<target name="default" depends="">
+
+	<echo level="error">Invalid target name!</echo>
+	<echo level="info">-----------------------------</echo>
+	<echo level="info">   / \ / \ / \ / \ / \ / \ / \  </echo>
+	<echo level="info">  ( I | N | S | T | A | L | L )</echo>
+	<echo level="info">   \_/ \_/ \_/ \_/ \_/ \_/ \_/</echo>
+	<echo level="info">        Install Framework     </echo>
+	<echo level="info">-----------------------------</echo>
+</target>
+
+<target name="print_banner" depends="">
+	<echo level="info">-----------------------------</echo>
+	<echo level="info">   / \ / \ / \ / \ / \ / \ / \  </echo>
+	<echo level="info">  ( I | N | S | T | A | L | L )</echo>
+	<echo level="info">   \_/ \_/ \_/ \_/ \_/ \_/ \_/</echo>
+	<echo level="info">        Install Framework     </echo>
+	<echo level="info">-----------------------------</echo>
+</target>
+
+<target name="-init">
+	<!-- global variables -->		
+	<property file="${basedir.unix}/general-config.properties"/> 
+
+	<!--property name="log.dir" location="log"/-->
+	
+	<!-- logging directory -->
+    <mkdir dir="${log.dir}"/>
+    <!-- setup installation logging -->
+    <tstamp>
+      <format property="date.now" pattern="yyyyMMddHHmmss"/>
+    </tstamp>
+	
+	<property name="release.logfile" location="${log.dir}/release-log-${date.now}.log"/>
+    <record name="${release.logfile}" loglevel="info" action="start" emacsmode="true" append="true"/>
+	<antcall target="print_banner"/>
+</target>
+
+<target name="-config">
+	<echo message="### Getting cell, node and server name. ###"/>
+	<exec executable="${was.admin}" resultproperty="result" failonerror="true">
+		<arg line="-f ${basedir.unix}/scripts/init.py -lang jython -conntype none -javaoption -Dwsadmin.script.libraries=${scripts.dir}/info"/>
+	</exec>
+	<echo>Result: ${result}</echo>
+</target>
+
+<target name="-read-was-props" description="Read was properties from file...">
+<!-- read properties for WAS -->
+	<echo level="info" message="reading property file...(${basedir.unix}/was-config.properties)"/>
+	<property file="${basedir.unix}/was-config.properties"/> 
+	<property file="${basedir.unix}/properties.txt"/> 
+	<echo level="info" message="using ${was.home}..."/>
+</target>
+
+<target name="build" depends="-init,-read-was-props">
+	<!--prop-require prop="action" /-->	
+		
+	<echo level="info" message="(build)using ${was.home}..."/>
+	<antcall target="print_banner"/>	
+	<antcall target="${action}"/>	
+</target>
+	
+<target name="menu"  description="Step 1" depends="-init,-read-was-props">	
+	<property name="image.directory" value="${basedir.unix}/images"/>
+	<if>
+		<or>			
+			<equals arg1="${action}" arg2=""/>
+			<not>
+				<isset property="action"/>
+			</not>
+		</or>		
+		<then>
+		    <antmenu image="${image.directory}/WebSphere_logo.jpg" icon="${image.directory}/WebSphere2.jpg"
+			title="WAS Configurator"
+			stylesheet="${image.directory}/installer-styles.properties">
+				<AntMenuItem name="Functions">
+					<AntMenuItem name="Initial configuration to get important values" target="-config"/>
+					<AntMenuItem name="list Applications" target="listApps"/>
+					<AntMenuItem name="Install Application" target="installApp"/>
+					<AntMenuItem name="Start application" target="startApp"/>
+					<AntMenuItem name="Stop Application" target="stopApp"/>
+					<AntMenuItem name="uninstall application" target="uninstallApp"/>
+					<AntMenuItem name="modify environment vars" target="createVars"/>
+					<AntMenuItem name="Create a J2C connection factory" target="createCTG2"/>
+				</AntMenuItem>				
+				<AntMenuItem name="Exit">
+					<AntMenuItem name="Exit" target="exit"/>
+				</AntMenuItem>	
+				<label>Execute each task one after another.</label>
+				<button label="1. Create Web Server" target="createWebserver"/>
+				<button label="2. Create DB2 JDBC provider" target="createJDBCProviders"/>
+				<button label="3. Create DB2 Datasource" target="createDataSources"/>
+				<button label="4. Create CICS Connection" target="createCTG"/>
+				<button label="5. Create URLs" target="createURLs"/>
+				<button label="6. Define JVM properties" target="configurejvm"/>
+				<button label="7. Stop server" target="stopServer"/>
+				<button label="8. Start server" target="startServer"/>
+				<button label="9. Install Application" target="installApp"/>
+				<button label="10. Post Application configuration" target="postConfig"/>
+				<button label="11. Create keystore " target="createKeystore"/>
+				<button label="12. Add Signer certificates" target="addSignerCert"/>
+				<button label="13. Add Personal certificates" target="addPersCert"/>
+				<button label="Start application" target="startApp"/>	
+				<button label="Stop application" target="stopApp"/>	
+				<button label="Update application" target="updApp"/>	
+				<button label="Exit" target="exit"/>
+			</antmenu>
+		</then>
+		<else>
+			<antcall target="${action}"/>
+		</else>
+	</if>
+</target>
+
+<target name="startApp">
+	<antform title="Start Application" image="${image.directory}/WebSphere_logo.jpg"
+				icon="${image.directory}/WebSphere2.jpg"
+				stylesheet="${image.directory}/installer-styles.properties"
+				lookAndFeel="com.sun.java.swing.plaf.windows.WindowsLookAndFeel"
+				width="800"
+				height="600">
+			<label>Here you should insert your application name.</label>
+			<textProperty label="Application name :" property="appName" required="true"/>	
+	</antform>
+    <antcall target="wsant">
+		<param name="action" value="startApp"/>
+	</antcall>
+</target>
+<target name="stopApp">
+	<antform title="Stop Application" image="${image.directory}/WebSphere_logo.jpg"
+				icon="${image.directory}/WebSphere2.jpg"
+				stylesheet="${image.directory}/installer-styles.properties"
+				lookAndFeel="com.sun.java.swing.plaf.windows.WindowsLookAndFeel"
+				width="800"
+				height="600">
+			<label>Here you should insert your application name.</label>
+			<textProperty label="Application name :" property="appName" required="true"/>	
+	</antform>
+    <antcall target="wsant">
+		<param name="action" value="stopApp"/>
+	</antcall>
+</target>
+
+<target name="uninstallApp">
+	<antform title="Uninstall Application" image="${image.directory}/WebSphere_logo.jpg"
+				icon="${image.directory}/WebSphere2.jpg"
+				stylesheet="${image.directory}/installer-styles.properties"
+				lookAndFeel="com.sun.java.swing.plaf.windows.WindowsLookAndFeel"
+				width="800"
+				height="600">
+			<label>Here you should insert your application name.</label>
+			<textProperty label="Application name :" property="appName" required="true"/>	
+	</antform>
+    <antcall target="wsant">
+		<param name="action" value="uninstallApp"/>
+	</antcall>
+</target>
+
+<target name="exit">
+	<echo>The End.</echo>
+</target>
+</project>
